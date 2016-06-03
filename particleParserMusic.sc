@@ -76,9 +76,8 @@ x = {GrainFM.ar(2,
 
 
 
-
 (
-   x = CSVFileReader.read("/home/alex/dev/soundOfCollisions/v2/data.csv").postcs;
+   x = CSVFileReader.read( (PathName(thisProcess.nowExecutingPath).pathOnly ++ "data/data.csv").standardizePath).postcs;
 )
 
 (
@@ -88,7 +87,7 @@ x = {GrainFM.ar(2,
    fork {
 
    // Loop on events
-   CSVFileReader.read("/home/alex/dev/soundOfCollisions/v2/data.csv").postcs.do
+   CSVFileReader.read((PathName(thisProcess.nowExecutingPath).pathOnly ++ "data/data.csv").standardizePath).postcs.do
    {
 
 	  arg event;
