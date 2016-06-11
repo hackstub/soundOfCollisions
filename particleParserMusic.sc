@@ -204,7 +204,7 @@ SynthDef(\gendy, { |out=0,freq=200, freqResonz=4000, bwr=5, modulation=1, pos=0,
 )
 
 
-Synth(\gendy, [\amp,30, \modulation,100]);
+Synth(\gendy, [\amp,1, \modulation,100]);
 
 
 
