@@ -1,6 +1,8 @@
 
 
 (
+// Les synthétiseurs
+
 SynthDef(\grainFM, {
 
 	arg density  = 30,
@@ -23,10 +25,7 @@ SynthDef(\grainFM, {
     Out.ar(0,signal * env)
 
 }).add;
-)
 
-
-(
 SynthDef(\grainFMperc, {
 
 	arg density  = 30,
@@ -80,13 +79,14 @@ x = {GrainFM.ar(2,
    x = CSVFileReader.read( (PathName(thisProcess.nowExecutingPath).pathOnly ++ "data/data.csv").standardizePath).postcs;
 )
 
-(
 
+
+(
    //var synth = Synth(\grainFM, [\amp, 0]);
 
    fork {
 
-   // Loop on events
+   // Loop on event
    CSVFileReader.read((PathName(thisProcess.nowExecutingPath).pathOnly ++ "data/data.csv").standardizePath).postcs.do
    {
 
@@ -156,13 +156,197 @@ x = {GrainFM.ar(2,
 
 	//synth.set(\amp, 0);
 
-	// End of loop on events
+	// End of loop on event
    };
 
    //synth.release;
 	};
 
 ""
+)
+
+//////////////////////////////////////////////////////////////////////
+// other timbre
+/*
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+You need install SuperCollider Plugins : https://github.com/supercollider/sc3-plugins
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+*/
+
+(
+SynthDef(\gendy, { |out=0,freq=200, freqResonz=4000, bwr=5, modulation=1, pos=0, dur=3, amp=1|
+	var n, sig, env;
+	n=10;
+
+	env = EnvGen.kr(Env.perc, levelScale:amp, timeScale:dur, doneAction:2);
+
+	sig = Pan2.ar(
+		Resonz.ar(
+			Mix.fill(n,{
+				var numcps = rrand(2,20);
+
+				Gendy1.ar(
+					6.rand,6.rand,
+					1.0.rand,1.0.rand,
+					freq, freq*1.5,
+					1.0.rand, 1.0.rand, numcps,
+					SinOsc.kr(modulation, 0, numcps/2, numcps/2),
+					1/(n.sqrt)
+				)
+			}),
+			freqResonz, bwr),
+		pos, 5);
+
+	sig = Limiter.ar(sig, 0.6);
+
+	Out.ar(out, sig * env)
+}).add;
+)
+
+
+Synth(\gendy, [\amp,30, \modulation,100]);
+
+
+
+(
+var type, energy, eta, phi;
+var energyMin, energyMax;
+var data;
+
+
+"import data".postln;
+data = CSVFileReader.read( (PathName(thisProcess.nowExecutingPath).pathOnly ++ "data/data.csv").standardizePath);
+
+
+
+data.do({ arg event;
+	var nParticles = asInteger(event[0]);
+
+	if (nParticles > 0, {
+		forBy(2, 4, event.size-1, { |i|
+			energy = energy.add(event[i].asFloat);
+		});
+	});
+});
+
+energyMin = energy.min; energyMax = energy.max;
+// postf("energyMin = % -- energyMax = %\n", energyMin, energy.max);
+
+
+
+fork {
+	data.do({ arg event;
+		var nParticles = asInteger(event[0]);
+
+		event.postln;
+
+		// Loop on particles in the event
+		if (nParticles > 0, {
+			forBy(1, 4, event.size-1, { |i|
+				type = switch(event[i])
+					      {"M"}{1}
+					      {"P"}{2}
+					      {"E"}{3}
+					      {"J"}{4};
+				energy = event[i+1].asFloat;
+				eta = event[i+2].asFloat;
+				phi = event[i+3].asFloat;
+
+				Synth(\gendy, [
+					// \freq, 200,
+					\freq, type * eta.abs.linlin(0, pi, 40, 200),
+					\freqResonz, 4000,
+					\bwr, eta.abs.linlin(0, pi, 5, 0.5),
+					\modulation, switch(type)
+					      {1}{0.05}
+					      {2}{5}
+					      {3}{50}
+					      {4}{150},
+					\pos, cos(phi),
+					\dur, energy.linlin(energyMin, energyMax, 0.5, 5),
+					\amp, energy.linlin(energyMin, energyMax, 0.05,1)
+				]);
+			});
+		}, {energy = (energyMin+energyMax)/2});
+
+		energy.linlin(energyMin, energyMax, 0.15, 0.6).wait;
+	});
+};
+)
+
+
+/*
+[ 1, 			M, 		120.350,	-1.772, 1.863 ]
+[nbParticules,	type,	energy,			eta,	phi]
+
+
+density = switch(type)
+{"J"}{150}
+{"M"}{10}
+{"E"}{50}
+{"P"}{25};
+*/
+
+
+(
+var type, energy, eta, phi;
+var energyMin, energyMax;
+var data;
+
+
+"import data".postln;
+data = CSVFileReader.read( (PathName(thisProcess.nowExecutingPath).pathOnly ++ "data/data.csv").standardizePath);
+
+
+
+data.do({ arg event;
+	var nParticles = asInteger(event[0]);
+
+	if (nParticles > 0, {
+		forBy(2, 4, event.size-1, { |i|
+			energy = energy.add(event[i].asFloat);
+		});
+	});
+});
+
+energyMin = energy.min; energyMax = energy.max;
+// postf("energyMin = % -- energyMax = %\n", energyMin, energy.max);
+
+
+
+fork {
+	data.do({ arg event;
+		var nParticles = asInteger(event[0]);
+
+		event.postln;
+
+		// Loop on particles in the event
+		if (nParticles > 0, {
+			forBy(1, 4, event.size-1, { |i|
+				type = event[i];
+				energy = event[i+1].asFloat;
+				eta = event[i+2].asFloat;
+				phi = event[i+3].asFloat;
+
+				Synth(\gendy, [
+					\freq, 200,
+					\freqResonz, 4000,
+					\bwr, eta.abs.linlin(0, pi, 5, 0.5),
+					\modulation, switch(type)
+					      {"M"}{0.1}
+					      {"P"}{5}
+					      {"E"}{50}
+					      {"J"}{150},
+					\pos, cos(phi),
+					\dur, energy.linlin(energyMin, energyMax, 0.5, 5),
+					\amp, energy.linlin(energyMin, energyMax, 0.1,1)
+				]);
+			});
+		}, {energy = [energyMin, energyMax].mean});
+
+		energy.linlin(energyMin, energyMax, 0.1, 0.6).wait;
+	});
+};
 )
 
 
